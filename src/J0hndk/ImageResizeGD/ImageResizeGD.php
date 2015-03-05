@@ -30,7 +30,7 @@ class ImageResizeGD {
     /**
      * @var int
      */
-    private $sourceExtension;
+    private $sourceType;
 
     /**
      * @var int
@@ -42,11 +42,19 @@ class ImageResizeGD {
     private $newHeight;
 
     /**
+     * @var int
+     */
+    private $defaultJPEGCompression;
+
+    /**
+     * @var int
+     */
+    private $defaultPNGCompression;
+
+    /**
      * @var array
      */
     private $allowedImageTypes = array(IMAGETYPE_JPEG, IMAGETYPE_GIF, IMAGETYPE_PNG);
-
-
 
 
     /**
@@ -55,10 +63,15 @@ class ImageResizeGD {
      * @author hi@j0hn.dk
      *
      * @param string $imagePath Path to the source image
+     * @param int $defaultJPEGCompression integer <0; 100>
+     * @param int $defaultPNGCompression integer <0; 9>
      *
      */
-    function __construct($imagePath) {
+    function __construct($imagePath, $defaultJPEGCompression = 80, $defaultPNGCompression = 9) {
         $this->image = $this->openImageFile($imagePath);
+
+        $this->setDefaultJPEGCompression($defaultJPEGCompression);
+        $this->setDefaultPNGCompression($defaultPNGCompression);
 
         $this->sourceWidth = imagesx($this->image);
         $this->sourceHeight = imagesy($this->image);
@@ -189,7 +202,7 @@ class ImageResizeGD {
      * Only first two parameters are required. By default output will be saved as the same type as source.
      *
      * @param string $saveImageName Name of the output file. Do not use extension here, it will be added based on $extension parameter.
-     * @param int $quality Should be value <0; 100>
+     * @param int $quality Should be value <0; 100> for IMAGETYPE_JPEG, <0; 9> for IMAGETYPE_PNG
      * @param int $extension Desired output format. Should be one of php predefined constants: IMAGETYPE_JPEG, IMAGETYPE_GIF, IMAGETYPE_PNG
      * @param string|null $backgroundColor Should be a hexadecimal RGB color value without hash, like FF0000 or 090909
      * @return string Name of saved output file with extension. For example foo.jpg
@@ -198,17 +211,17 @@ class ImageResizeGD {
      * @throws InvalidArgumentException When $extension is not a value of any of those constants: IMAGETYPE_JPEG, IMAGETYPE_GIF, IMAGETYPE_PNG
      *
      */
-    public function saveImageFile($saveImageName, $quality, $extension = -1, $backgroundColor = null) {
+    public function saveImageFile($saveImageName, $extension = null, $quality = null, $backgroundColor = null) {
         if($this->imageModified === null) {
             $this->copyImageDataWithoutResampling();
         }
 
-        if($extension !== -1) {
+        if($extension !== null) {
             if(!in_array($extension, $this->allowedImageTypes)) {
                 throw new \InvalidArgumentException('This image type is not supported.');
             }
         } else {
-            $extension = $this->sourceExtension;
+            $extension = $this->sourceType;
         }
 
         if($backgroundColor !== null) {
@@ -219,8 +232,12 @@ class ImageResizeGD {
             $quality = 0;
         }
 
-        if($quality > 100) {
+        if($quality > 100 && $extension === IMAGETYPE_JPEG) {
             $quality = 100;
+        }
+
+        if($quality > 9 && $extension === IMAGETYPE_PNG) {
+            $quality = 9;
         }
 
         switch($extension) {
@@ -234,6 +251,9 @@ class ImageResizeGD {
                 break;
             case IMAGETYPE_JPEG:
                 if (imagetypes() & IMG_JPG) {
+                    if($quality === null) {
+                        $quality = $this->getDefaultJPEGCompression();
+                    }
                     $imageFile = $saveImageName.'.jpg';
                     $imageResult = imagejpeg($this->imageModified, $imageFile, $quality);
                 } else {
@@ -241,10 +261,12 @@ class ImageResizeGD {
                 }
                 break;
             case IMAGETYPE_PNG:
-                $pngQuality = 9 - round(($quality/100) * 9);
                 if (imagetypes() & IMG_PNG) {
+                    if($quality === null) {
+                        $quality = $this->getDefaultPNGCompression();
+                    }
                     $imageFile = $saveImageName.'.png';
-                    $imageResult = imagepng($this->imageModified, $imageFile, $pngQuality);
+                    $imageResult = imagepng($this->imageModified, $imageFile, $quality);
                 } else {
                     throw new \Exception('Your GD library does not support png image types.');
                 }
@@ -264,11 +286,43 @@ class ImageResizeGD {
     }
 
     /**
+     * @return int
+     */
+    public function getDefaultJPEGCompression()
+    {
+        return $this->defaultJPEGCompression;
+    }
+
+    /**
+     * @param int $defaultJPEGCompression
+     */
+    public function setDefaultJPEGCompression($defaultJPEGCompression)
+    {
+        $this->defaultJPEGCompression = $defaultJPEGCompression;
+    }
+
+    /**
+     * @return int
+     */
+    public function getDefaultPNGCompression()
+    {
+        return $this->defaultPNGCompression;
+    }
+
+    /**
+     * @param int $defaultPNGCompression
+     */
+    public function setDefaultPNGCompression($defaultPNGCompression)
+    {
+        $this->defaultPNGCompression = $defaultPNGCompression;
+    }
+
+    /**
      * @return string
      */
-    public function getSourceExtension()
+    public function getSourceType()
     {
-        return $this->sourceExtension;
+        return $this->sourceType;
     }
 
     /**
@@ -354,17 +408,17 @@ class ImageResizeGD {
         }
 
         switch ($imageType) {
-            case 1 :
+            case IMAGETYPE_GIF :
                 $image = imagecreatefromgif($imagePath);
-                $this->sourceExtension = IMAGETYPE_GIF;
+                $this->sourceType = IMAGETYPE_GIF;
                 break;
-            case 2 :
+            case IMAGETYPE_JPEG :
                 $image = imagecreatefromjpeg($imagePath);
-                $this->sourceExtension = IMAGETYPE_JPEG;
+                $this->sourceType = IMAGETYPE_JPEG;
                 break;
-            case 3 :
+            case IMAGETYPE_PNG :
                 $image = imagecreatefrompng($imagePath);
-                $this->sourceExtension = IMAGETYPE_PNG;
+                $this->sourceType = IMAGETYPE_PNG;
                 break;
             default:
                 break;

@@ -39,15 +39,22 @@ $image->resizeToFillDimensionsExactly(800, 600);
 ```
 Save new image.
 ```
-// File name and quality , same image type as source.
-// Quality should be an integer <0; 100>
-$fileName = $image->saveImageFile('test-files/output/test2', 90);
+// File name only, outputs same image type as source, default quality 80 for IMAGETYPE_JPEG, 9 for IMAGETYPE_PNG.
+$fileName = $image->saveImageFile('test-files/output/test2_output');
 
-//File name, quality and output type.
-$fileName = $image->saveImageFile('test-files/output/test2', 90, IMAGETYPE_PNG);
+// File name, output type and quality.
+// Quality should be an integer <0; 100> for IMAGETYPE_JPEG
+// Quality should be an integer <0; 9> for IMAGETYPE_PNG
+$fileName = $image->saveImageFile('test-files/output/test2_output', IMAGETYPE_JPEG, 90);
 
-//File name, quality, output type, solid background color.
-$fileName = $image->saveImageFile('test-files/output/test2', 90, IMAGETYPE_PNG, 'FF0000');
-
+// File name, output type, quality and solid background color.
+$fileName = $image->saveImageFile('test-files/output/test2_output', IMAGETYPE_JPEG, 90, 'FF0000');
+```
+Example
+-----------
+```
+$image = new ImageResizeGD('test-files/test2.png');
+$image->resizeToFillDimensionsExactly(800, 600);
+$fileName = $image->saveImageFile('test-files/output/test2_output');
 ```
 
